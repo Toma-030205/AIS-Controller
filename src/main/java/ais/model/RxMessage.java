@@ -8,26 +8,26 @@ import java.time.LocalDateTime;
 public class RxMessage {
 
     /* ===== 基本属性 ===== */
-    public int index;                  // TRAY 内番号
-    public LocalDateTime utcDateTime;   // 受信時刻（仮）
+    private int index;                  // TRAY 内番号
+    private LocalDateTime utcDateTime;   // 受信時刻（仮）
 
     /* ===== 状態フラグ ===== */
-    public boolean unread;              // 未読 = true → "*" 表示
-    public boolean replyRequired;       // "R" 表示
-    public boolean replyReceived;       // "A" 表示
+    private boolean unread;              // 未読 = true → "*" 表示
+    private boolean replyRequired;       // "R" 表示
+    private boolean replyReceived;       // "A" 表示
 
     /* ===== メッセージ種別 ===== */
-    public EditAndTxModel.Format format;
-    public EditAndTxModel.Category category;
-    public boolean reply;               // REPLY ON / OFF
-    public String function;             // TEXT 等
-    public int channel;                 // CH
+    private EditAndTxModel.Format format;
+    private EditAndTxModel.Category category;
+    private boolean reply;               // REPLY ON / OFF
+    private String function;             // TEXT 等
+    private int channel;                 // CH
 
     /* ===== 送信元 ===== */
-    public String source;               // MMSI or NAME
+    private String source;               // MMSI or NAME
 
     /* ===== 本文 ===== */
-    public String text;
+    private String text;
 
     /* ===== コンストラクタ ===== */
     public RxMessage() {
@@ -35,6 +35,28 @@ public class RxMessage {
         this.replyRequired = false;
         this.replyReceived = false;
         this.utcDateTime = LocalDateTime.now();
+    }
+
+    public void configure(
+            EditAndTxModel.Category category,
+            LocalDateTime utcDateTime,
+            String source,
+            String text) {
+
+        this.category = category;
+        this.utcDateTime = utcDateTime;
+        this.source = source;
+        this.text = text;
+    }
+
+    public void setFlags(boolean unread, boolean replyRequired, boolean replyReceived) {
+        this.unread = unread;
+        this.replyRequired = replyRequired;
+        this.replyReceived = replyReceived;
+    }
+
+    public void setIndex(int index) {
+        this.index = index;
     }
 
     /* =====================================================
@@ -116,6 +138,10 @@ public class RxMessage {
         return utcDateTime.format(fmt);
     }
 
+    public LocalDateTime getUtcDateTime() {
+        return utcDateTime;
+    }
+
     public boolean isAddressed() {
         return format == EditAndTxModel.Format.ADDRESSED;
     }
@@ -134,6 +160,10 @@ public class RxMessage {
 
     public String getCategory() {
         return category.name();
+    }
+
+    public EditAndTxModel.Category getCategoryValue() {
+        return category;
     }
 
     public String getFunction() {

@@ -1,42 +1,42 @@
 package ais.model;
 
 public class ShipInfo {
-    public int mmsi;
-    public long lastReceivedTime;
+    private int mmsi;
+    private long lastReceivedTime;
 
-    public double lat;
-    public double lon;
-    public double sog;
-    public double cog;
-    public double trueHeading;
-    public int navStatus;
-    public double rot;
-    public int posnQuality;
-    public int raimFlag;
-    public int timestamp;
-    public int syncState;
+    private double lat;
+    private double lon;
+    private double sog;
+    private double cog;
+    private double trueHeading;
+    private int navStatus;
+    private double rot;
+    private int posnQuality;
+    private int raimFlag;
+    private int timestamp;
+    private int syncState;
 
-    public int imo;
-    public String callSign;
-    public String vesselName;
-    public int lastMessageType;
+    private int imo;
+    private String callSign;
+    private String vesselName;
+    private int lastMessageType;
 
-    public int shipType;
-    public String CargoType;
-    public String destination;
-    public double draught;
-    public int dimA;
-    public int dimB;
-    public int dimC;
-    public int dimD;
-    public int length;
-    public int beam;
-    public int epfd;
+    private int shipType;
+    private String CargoType;
+    private String destination;
+    private double draught;
+    private int dimA;
+    private int dimB;
+    private int dimC;
+    private int dimD;
+    private int length;
+    private int beam;
+    private int epfd;
 
-    public int etaMonth = -1;
-    public int etaDay = -1;
-    public int etaHour = -1;
-    public int etaMinute = -1;
+    private int etaMonth = -1;
+    private int etaDay = -1;
+    private int etaHour = -1;
+    private int etaMinute = -1;
 
     public ShipInfo() {
     }
@@ -82,6 +82,66 @@ public class ShipInfo {
 
     public boolean isStale(long now, double thresholdMinutes) {
         return (now - lastReceivedTime) / 60000.0 >= thresholdMinutes;
+    }
+
+    public int getMmsi() {
+        return mmsi;
+    }
+
+    public double getLat() {
+        return lat;
+    }
+
+    public double getLon() {
+        return lon;
+    }
+
+    public double getSog() {
+        return sog;
+    }
+
+    public double getCog() {
+        return cog;
+    }
+
+    public double getTrueHeading() {
+        return trueHeading;
+    }
+
+    public double getRot() {
+        return rot;
+    }
+
+    public int getTimestamp() {
+        return timestamp;
+    }
+
+    public int getImo() {
+        return imo;
+    }
+
+    public String getCallSign() {
+        return callSign;
+    }
+
+    public String getVesselName() {
+        return vesselName == null ? "" : vesselName;
+    }
+
+    public String getDestination() {
+        return destination == null ? "" : destination;
+    }
+
+    public double getDraught() {
+        return draught;
+    }
+
+    public int getLength() {
+        return length;
+    }
+
+    public int getBeam() {
+        return beam;
     }
 
     private void updateDimensions() {

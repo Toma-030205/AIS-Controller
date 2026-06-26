@@ -61,15 +61,15 @@ public class RxTrayDetailView extends JPanel {
         StringBuilder sb = new StringBuilder();
 
         // 1. UTC 日時
-        sb.append(msg.utcDateTime.format(UTC_FMT)).append("\n");
+        sb.append(msg.getUtcDateTime().format(UTC_FMT)).append("\n");
 
         // 2. FORMAT（MMSI or BROADCAST）
         sb.append(msg.getDestinationLabel()).append("\n");
 
         // 3. メッセージ種別
-        sb.append("CATEGORY : ").append(msg.category).append("\n");
-        sb.append("FUNCTION : ").append(msg.function).append("\n");
-        sb.append("REPLY    : ").append(msg.reply ? "ON" : "OFF").append("\n");
+        sb.append("CATEGORY : ").append(msg.getCategory()).append("\n");
+        sb.append("FUNCTION : ").append(msg.getFunction()).append("\n");
+        sb.append("REPLY    : ").append(msg.getReply()).append("\n");
         sb.append("CH       : ").append(msg.getChannel()).append("\n");
 
         detailArea.setText(sb.toString());

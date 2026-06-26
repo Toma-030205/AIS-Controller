@@ -50,7 +50,7 @@ public class TxTrayModel {
     /* ===== 番号振り直し ===== */
     private void renumber() {
         for (int i = 0; i < messages.size(); i++) {
-            messages.get(i).index = i + 1;
+            messages.get(i).setIndex(i + 1);
         }
     }
 }

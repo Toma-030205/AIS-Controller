@@ -47,26 +47,26 @@ public class OtherShipDetailView extends JPanel {
 
     switch(page) {
         case 1:
-            DetailRowUtil.addRow(othershipPagePanel," MMSI", ship.mmsi);           // 船を識別する9桁のID
-            DetailRowUtil.addRow(othershipPagePanel," NAME", ship.vesselName);     // 船名
-            DetailRowUtil.addRow(othershipPagePanel," IMO NO.", ship.imo);         // IMO（国際海事機関）番号。船に固有で、基本的に一生変わらない識別番号。
-            DetailRowUtil.addRow(othershipPagePanel," CALL SIGN", ship.callSign);  // 無線呼出符号（船舶局免許で決まる）
+            DetailRowUtil.addRow(othershipPagePanel," MMSI", ship.getMmsi());           // 船を識別する9桁のID
+            DetailRowUtil.addRow(othershipPagePanel," NAME", ship.getVesselName());     // 船名
+            DetailRowUtil.addRow(othershipPagePanel," IMO NO.", ship.getImo());         // IMO（国際海事機関）番号。船に固有で、基本的に一生変わらない識別番号。
+            DetailRowUtil.addRow(othershipPagePanel," CALL SIGN", ship.getCallSign());  // 無線呼出符号（船舶局免許で決まる）
             break;
 
         case 2:
             DetailRowUtil.addRow(othershipPagePanel," POSN DEVICE", ship.getEpfdDisplay());        // Position Device:位置計測に使用しているデバイス名
-            DetailRowUtil.addRow(othershipPagePanel," LAT", ship.lat);             // 緯度
-            DetailRowUtil.addRow(othershipPagePanel," LON", ship.lon);             // 経度
-            DetailRowUtil.addRow(othershipPagePanel," SOG", ship.sog);             // 対地速力(ノット)
-            DetailRowUtil.addRow(othershipPagePanel," COG", ship.cog);             // 対地針路（度）
+            DetailRowUtil.addRow(othershipPagePanel," LAT", ship.getLat());             // 緯度
+            DetailRowUtil.addRow(othershipPagePanel," LON", ship.getLon());             // 経度
+            DetailRowUtil.addRow(othershipPagePanel," SOG", ship.getSog());             // 対地速力(ノット)
+            DetailRowUtil.addRow(othershipPagePanel," COG", ship.getCog());             // 対地針路（度）
             break;
 
         case 3:
-            DetailRowUtil.addRow(othershipPagePanel," HDG", ship.trueHeading);     // 船首が向いている向き（真方位）
-            DetailRowUtil.addRow(othershipPagePanel," ROT", ship.rot);             // 旋回率（度/分）
+            DetailRowUtil.addRow(othershipPagePanel," HDG", ship.getTrueHeading());     // 船首が向いている向き（真方位）
+            DetailRowUtil.addRow(othershipPagePanel," ROT", ship.getRot());             // 旋回率（度/分）
             DetailRowUtil.addRow(othershipPagePanel," POSN QUALITY", ship.getPosnQualityDisplay());          // 位置情報の信頼度
             DetailRowUtil.addRow(othershipPagePanel," RAIM", ship.getRaimFlagDisplay());                  // GNSS 受信機が自律的に衛星の異常を検出する仕組み
-            DetailRowUtil.addRow(othershipPagePanel," TIMESTAMP", ship.timestamp); // AIS 動的メッセージが送られたタイムスタンプ（0〜59秒）
+            DetailRowUtil.addRow(othershipPagePanel," TIMESTAMP", ship.getTimestamp()); // AIS 動的メッセージが送られたタイムスタンプ（0〜59秒）
             break;
 
         case 4:
@@ -76,17 +76,17 @@ public class OtherShipDetailView extends JPanel {
 
         case 5:
             DetailRowUtil.addRow(othershipPagePanel," NAV STATUS", ship.getNavStatusDisplay());    // AIS が送る航行状態
-            DetailRowUtil.addRow(othershipPagePanel," DESTINATION", ship.destination); // 航海目的地
+            DetailRowUtil.addRow(othershipPagePanel," DESTINATION", ship.getDestination()); // 航海目的地
             break;
 
         case 6:
             DetailRowUtil.addRow(othershipPagePanel," ETA(M/D,H:M)", ship.getEtaDisplay());    // 到着予定時刻
-            DetailRowUtil.addRow(othershipPagePanel," DRAUGHT", ship.draught);                 // 喫水（船底から水面までの高さ）
-            DetailRowUtil.addRow(othershipPagePanel," LENGTH", ship.length);                   // 船体長
+            DetailRowUtil.addRow(othershipPagePanel," DRAUGHT", ship.getDraught());                 // 喫水（船底から水面までの高さ）
+            DetailRowUtil.addRow(othershipPagePanel," LENGTH", ship.getLength());                   // 船体長
             break;
         
         case 7:
-            DetailRowUtil.addRow(othershipPagePanel," BEAM", ship.beam);               // 船幅
+            DetailRowUtil.addRow(othershipPagePanel," BEAM", ship.getBeam());               // 船幅
             DetailRowUtil.addRow(othershipPagePanel," TYPE OF SHIP", ship.getShipTypeDisplay());   // 船舶の種類
             break;
         case 8:
@@ -100,12 +100,12 @@ public class OtherShipDetailView extends JPanel {
             // --- BRG / RNG 計算（GraphicView と同一） ---
             double brg = NavigationUtil.calcBearingDeg(
                     own.lat, own.lon,
-                    ship.lat, ship.lon
+                    ship.getLat(), ship.getLon()
             );
 
             double rng = NavigationUtil.calcRangeNm(
                     own.lat, own.lon,
-                    ship.lat, ship.lon
+                    ship.getLat(), ship.getLon()
             );
             DetailRowUtil.addRow(othershipPagePanel," NO", "??");         // 他船で使用されているAISのシリアル番号
             DetailRowUtil.addRow(othershipPagePanel," CPA", "");        // 自船と他船が今の航跡を続けた場合に最も近づく距離（海里）

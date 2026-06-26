@@ -9,31 +9,53 @@ import java.time.LocalDateTime;
 public class TxMessage {
 
     /* ===== 基本属性 ===== */
-    public int index;                 // TRAY 内番号（1～10）
-    public boolean transmitted;       // 未送信 = false → "*" 表示用
-    public LocalDateTime utcDateTime;  // SAVE / TX 時の UTC
+    private int index;                 // TRAY 内番号（1～10）
+    private boolean transmitted;       // 未送信 = false → "*" 表示用
+    private LocalDateTime utcDateTime;  // SAVE / TX 時の UTC
 
     /* ===== メッセージ種別 ===== */
-    public EditAndTxModel.Format format;
-    public EditAndTxModel.Category category;
-    public boolean reply;             // REPLY ON / OFF
-    public String function;           // TEXT
-    public int channel;               // CH
+    private EditAndTxModel.Format format;
+    private EditAndTxModel.Category category;
+    private boolean reply;             // REPLY ON / OFF
+    private String function;           // TEXT
+    private int channel;               // CH
 
     /* ===== 宛先 ===== */
-    public String destination;         // MMSI / BROADCAST
+    private String destination;         // MMSI / BROADCAST
 
     /* ===== 本文 ===== */
-    public String text;
+    private String text;
 
     /* ===== 結果 ===== */
-    public TxResult result;            // NONE / OK / NG
+    private TxResult result;            // NONE / OK / NG
 
     /* ===== コンストラクタ ===== */
     public TxMessage() {
         this.transmitted = false;
         this.utcDateTime = LocalDateTime.now(); // SAVE 時刻
         this.result = TxResult.NONE;
+    }
+
+    public void configure(
+            EditAndTxModel.Format format,
+            EditAndTxModel.Category category,
+            boolean reply,
+            String function,
+            int channel,
+            String destination,
+            String text) {
+
+        this.format = format;
+        this.category = category;
+        this.reply = reply;
+        this.function = function;
+        this.channel = channel;
+        this.destination = destination;
+        this.text = text;
+    }
+
+    public void setIndex(int index) {
+        this.index = index;
     }
 
     /* =====================================================
@@ -90,6 +112,18 @@ public class TxMessage {
 
     public boolean isBroadcast() {
         return format == EditAndTxModel.Format.BROADCAST;
+    }
+
+    public LocalDateTime getUtcDateTime() {
+        return utcDateTime;
+    }
+
+    public String getDestination() {
+        return destination;
+    }
+
+    public TxResult getResult() {
+        return result;
     }
 
     /* =====================================================

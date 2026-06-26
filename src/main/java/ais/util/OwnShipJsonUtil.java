@@ -1,32 +1,44 @@
 package ais.util;
 
-import ais.model.NavStatus;
 import ais.model.OwnShipInfo;
+import java.util.LinkedHashMap;
+import java.util.Map;
 
 
 
 public class OwnShipJsonUtil {
 
     public static String toVoyageJson(OwnShipInfo own) {
+        Map<String, String> fields = new LinkedHashMap<>();
+        fields.put("type", "OwnShipVoyageUpdate");
+        fields.put("navStatus", String.valueOf(own.navStatus.getAisValue()));
+        fields.put("destination", own.destination);
+        fields.put("etaMMDD", own.getEtaDateValue());
+        fields.put("etaHHMM", own.getEtaTimeValue());
+        fields.put("draught", own.getDraughtDisplayText());
+        fields.put("shipType", own.getShipTypeSendValue());
+        fields.put("cargoType", own.CargoType);
 
         StringBuilder sb = new StringBuilder();
         sb.append("{");
-        sb.append("\"type\":\"OwnShipVoyageUpdate\",");
-        sb.append("\"navStatus\":\"").append(own.navStatus.getAisValue()).append("\",");
-        sb.append("\"destination\":\"").append(escapeJson(own.destination)).append("\",");
-
-        sb.append("\"etaMMDD\":\"").append(own.getEtaDateValue()).append("\",");
-        sb.append("\"etaHHMM\":\"").append(own.getEtaTimeValue()).append("\",");
-
-
-        sb.append("\"draught\":\"").append(own.getDraughtDisplayText()).append("\",");
-
-        sb.append("\"shipType\":\"").append(own.getShipTypeSendValue()).append("\",");
-
-        sb.append("\"cargoType\":\"").append(escapeJson(own.CargoType)).append("\"");
-
+        boolean first = true;
+        for (Map.Entry<String, String> field : fields.entrySet()) {
+            if (!first) {
+                sb.append(",");
+            }
+            appendJsonField(sb, field.getKey(), field.getValue());
+            first = false;
+        }
         sb.append("}");
         return sb.toString();
+    }
+
+    private static void appendJsonField(StringBuilder sb, String key, String value) {
+        sb.append("\"")
+                .append(escapeJson(key))
+                .append("\":\"")
+                .append(escapeJson(value))
+                .append("\"");
     }
 
     private static String escapeJson(String value) {

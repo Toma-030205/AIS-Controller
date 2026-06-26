@@ -53,15 +53,15 @@ public class TXMessageDetailView extends JPanel {
         StringBuilder sb = new StringBuilder();
 
         // 1. UTC 日時
-        sb.append(msg.utcDateTime.format(UTC_FMT)).append("\n");
+        sb.append(msg.getUtcDateTime().format(UTC_FMT)).append("\n");
 
         // 2. FORMAT（MMSI or BROADCAST）
-        sb.append(msg.destination).append("\n");
+        sb.append(msg.getDestination()).append("\n");
 
         // 3. メッセージ種別
-        sb.append("CATEGORY : ").append(msg.category).append("\n");
-        sb.append("FUNCTION : ").append(msg.function).append("\n");
-        sb.append("REPLY    : ").append(msg.reply ? "ON" : "OFF").append("\n");
+        sb.append("CATEGORY : ").append(msg.getCategory()).append("\n");
+        sb.append("FUNCTION : ").append(msg.getFunction()).append("\n");
+        sb.append("REPLY    : ").append(msg.getReply()).append("\n");
         sb.append("CH       : ").append(msg.getChannel()).append("\n");
 
         // 4. 結果表示
@@ -71,9 +71,9 @@ public class TXMessageDetailView extends JPanel {
             sb.append("TRANSMIT : ");
         }
 
-        if (msg.result == TxResult.OK) {
+        if (msg.getResult() == TxResult.OK) {
             sb.append("OK");
-        } else if (msg.result == TxResult.NG) {
+        } else if (msg.getResult() == TxResult.NG) {
             sb.append("NG");
         } else {
             sb.append("-");

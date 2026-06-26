@@ -17,22 +17,7 @@ public class InputController {
     }
 
     public void onSubPressed() {
-        if (dispatch(ScreenInputHandler::onSub)) {
-            return;
-        }
-
-        switch (ui.getCurrentScreen()) {
-            case LIST:
-                ui.showListSub();
-                ui.getListSubView().setSelectedIndex(0);
-                break;
-            case OTHER_DETAIL:
-                ui.showOtherDetailSub();
-                ui.getOtherShipSubMenuView().setSelectedIndex(0);
-                break;
-            default:
-                break;
-        }
+        dispatch(ScreenInputHandler::onSub);
     }
 
     public void onMenuPressed() {
@@ -41,142 +26,19 @@ public class InputController {
     }
 
     public void onDispPressed() {
-        switch (ui.getCurrentScreen()) {
-            case LIST:
-                showSelectedShipGraphic();
-                break;
-            case GRAPHIC:
-                ui.showOwnDetail1();
-                break;
-            case OWN_DETAIL1:
-                ui.showOwnDetail2();
-                break;
-            case OWN_DETAIL2:
-                ui.showOwnTRX();
-                break;
-            case OWN_TRX:
-                ui.showPosnTime();
-                break;
-            case POSN_TIME:
-                ui.showList();
-                break;
-            default:
-                break;
-        }
+        dispatch(ScreenInputHandler::onDisp);
     }
 
     public void onClrPressed() {
-        if (dispatch(ScreenInputHandler::onClr)) {
-            ui.clearCurrentShip();
-            return;
-        }
-
-        switch (ui.getCurrentScreen()) {
-            case LIST_SUB:
-            case MENU:
-                ui.showList();
-                break;
-            case OTHER_DETAIL_SUB:
-                ui.showOtherDetail();
-                break;
-            default:
-                break;
-        }
-        ui.clearCurrentShip();
+        dispatch(ScreenInputHandler::onClr);
     }
 
     public void onUpPressed() {
-        if (dispatch(ScreenInputHandler::onUp)) {
-            return;
-        }
-
-        switch (ui.getCurrentScreen()) {
-            case LIST:
-                ui.selectPrevShip();
-                break;
-            case MENU:
-                ui.selectPrevMenu();
-                break;
-            case LIST_SUB:
-                ui.selectPrevListSub();
-                break;
-            case BEARING:
-                ListSelectionNavigator.moveUp(ui.getBearingView().getList());
-                break;
-            case SORT:
-                ListSelectionNavigator.moveUp(ui.getSortView().getList());
-                break;
-            case NAME:
-                ListSelectionNavigator.moveUp(ui.getNameView().getList());
-                break;
-            case DISP:
-                ListSelectionNavigator.moveUp(ui.getDispView().getList());
-                break;
-            case OTHER_DETAIL_SUB:
-                ListSelectionNavigator.moveUp(ui.getOtherShipSubMenuView().getList());
-                break;
-            case OTHER_DETAIL:
-                ui.prevOtherDetailPage();
-                break;
-            case OWN_DETAIL1:
-                ui.prevOwnDetail1Page();
-                break;
-            case OWN_DETAIL2:
-                ui.prevOwnDetail2Page();
-                break;
-            case OWN_TRX:
-                ui.prevOwnTRXPage();
-                break;
-            default:
-                break;
-        }
+        dispatch(ScreenInputHandler::onUp);
     }
 
     public void onDownPressed() {
-        if (dispatch(ScreenInputHandler::onDown)) {
-            return;
-        }
-
-        switch (ui.getCurrentScreen()) {
-            case LIST:
-                ui.selectNextShip();
-                break;
-            case MENU:
-                ui.selectNextMenu();
-                break;
-            case LIST_SUB:
-                ui.selectNextListSub();
-                break;
-            case BEARING:
-                ListSelectionNavigator.moveDown(ui.getBearingView().getList());
-                break;
-            case SORT:
-                ListSelectionNavigator.moveDown(ui.getSortView().getList());
-                break;
-            case NAME:
-                ListSelectionNavigator.moveDown(ui.getNameView().getList());
-                break;
-            case DISP:
-                ListSelectionNavigator.moveDown(ui.getDispView().getList());
-                break;
-            case OTHER_DETAIL_SUB:
-                ListSelectionNavigator.moveDown(ui.getOtherShipSubMenuView().getList());
-                break;
-            case OTHER_DETAIL:
-                ui.nextOtherDetailPage();
-                break;
-            case OWN_DETAIL1:
-                ui.nextOwnDetail1Page();
-                break;
-            case OWN_DETAIL2:
-                ui.nextOwnDetail2Page();
-                break;
-            case OWN_TRX:
-                ui.nextOwnTRXPage();
-                break;
-            default:
-                break;
-        }
+        dispatch(ScreenInputHandler::onDown);
     }
 
     public void onLeftPressed() {
@@ -188,29 +50,26 @@ public class InputController {
     }
 
     public void onEnterPressed() {
-        if (dispatch(ScreenInputHandler::onEnter)) {
-            return;
-        }
-
-        switch (ui.getCurrentScreen()) {
-            case MENU:
-                ui.enterMenu();
-                break;
-            case LIST_SUB:
-                ui.enterListSub();
-                break;
-            case LIST:
-                ui.enterShipList();
-                break;
-            case OTHER_DETAIL_SUB:
-                ui.enterOtherDetailSub();
-                break;
-            default:
-                break;
-        }
+        dispatch(ScreenInputHandler::onEnter);
     }
 
     private void registerHandlers() {
+        register(new NavigationInputHandler(ui),
+                ScreenId.LIST,
+                ScreenId.MENU,
+                ScreenId.LIST_SUB,
+                ScreenId.BEARING,
+                ScreenId.SORT,
+                ScreenId.NAME,
+                ScreenId.DISP,
+                ScreenId.OTHER_DETAIL,
+                ScreenId.OTHER_DETAIL_SUB,
+                ScreenId.GRAPHIC,
+                ScreenId.OWN_DETAIL1,
+                ScreenId.OWN_DETAIL2,
+                ScreenId.OWN_TRX,
+                ScreenId.POSN_TIME);
+
         register(new MessageInputHandler(ui),
                 ScreenId.MESSAGE,
                 ScreenId.EDIT_AND_TX,
@@ -264,18 +123,6 @@ public class InputController {
     private boolean dispatch(Function<ScreenInputHandler, Boolean> action) {
         ScreenInputHandler handler = handlers.get(ui.getCurrentScreen());
         return handler != null && Boolean.TRUE.equals(action.apply(handler));
-    }
-
-    private void showSelectedShipGraphic() {
-        int row = ui.getShipListView().getTable().getSelectedRow();
-        if (row < 0) {
-            return;
-        }
-
-        int mmsi = ui.getShipListView().getSelectedMmsi();
-        if (mmsi >= 0) {
-            ui.showGraphic(mmsi);
-        }
     }
 
 }

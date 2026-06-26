@@ -57,7 +57,6 @@ import ais.view.OwnShipDetail2View;
 import ais.view.OwnShipTRXView;
 import ais.view.PersonsInputView;
 import ais.view.PosnTimeView;
-import ais.view.RoundButton;
 import ais.view.RxTrayDetailView;
 import ais.view.RxTrayListView;
 import ais.view.RxTraySubMenuView;
@@ -81,18 +80,13 @@ import ais.workflow.MaintenanceWorkflow;
 import ais.workflow.MessageWorkflow;
 import ais.workflow.VoyageWorkflow;
 import java.awt.*;
-import java.awt.event.*;
 import java.util.*;
-import java.util.logging.Logger;
 import javax.swing.*;
-import javax.swing.event.HyperlinkEvent;
 
 
 
 
 public class AISMain2 {
-    private static final Logger LOGGER = Logger.getLogger(AISMain2.class.getName());
-
     /* =====================================================
      * 定数・通信関連
      * ===================================================== */
@@ -187,7 +181,6 @@ public class AISMain2 {
      * 入力制御（Controller）
      * ===================================================== */
     private InputController inputController;
-    private static RoundButton lastButton = null;
     private MaintenanceWorkflow maintenanceWorkflow;
     private MessageWorkflow messageWorkflow;
     private VoyageWorkflow voyageWorkflow;
@@ -195,8 +188,6 @@ public class AISMain2 {
     /* =====================================================
      * 右ペイン（説明表示）
      * ===================================================== */
-    private JEditorPane infoPane;
-    private JScrollPane infoScroll;
     private RightPaneController rightPaneController;
     private ScreenNavigator screenNavigator;
 
@@ -332,150 +323,11 @@ public class AISMain2 {
         // =====================================================
         // ボタンフォーカスに応じて説明文を表示するための
         // JEditorPane + ScrollPane を初期化
-        this.infoPane = new JEditorPane();
-        this.rightPaneController = new RightPaneController(infoPane);
+        RightPanePanel rightPanel = new RightPanePanel();
+        this.rightPaneController = rightPanel.getController();
         screenNavigator.setRightPaneController(rightPaneController);
-        infoPane.setContentType("text/html");
-        infoPane.setEditable(false);
-        infoPane.setText("<html><body style='padding:12px;color:#404040;font-family:Sans-Serif;'></body></html>");
-        infoPane.setBackground(new Color(0xF9F9F9));
-        infoPane.addHyperlinkListener(e -> {
-            if (e.getEventType() == HyperlinkEvent.EventType.ACTIVATED) {
-                String desc = e.getDescription();
-                if (desc != null) {
-                    if (desc.startsWith("#")) {
-                        desc = desc.substring(1);
-                    }else if (desc.contains("#")) {
-                        desc = desc.substring(desc.indexOf('#') + 1);
-                    }
-                    infoPane.scrollToReference(desc);
-                }
-            }
-        });
 
-        JScrollPane infoScroll = new JScrollPane(infoPane);
-        infoScroll.setBorder(BorderFactory.createTitledBorder("詳細説明"));
-        infoScroll.setPreferredSize(new Dimension(300, 300));
-
-        JPanel rightPanel = new JPanel(new BorderLayout());
-        rightPanel.add(infoScroll, BorderLayout.CENTER);
-
-        // === 各ボタンの説明文 ===
-        final Map<String, String> descriptions = new HashMap<>();
-        descriptions.put("USER", "USER: ユーザーキー — よく使う画面をワンキーで呼び出せます。");
-        descriptions.put("SUB", "SUB: サブメニュー表示 — 現在の画面に応じた設定や補助操作を開きます。");
-        descriptions.put("MENU", "MENU: メインメニュー表示 — 各種サブメニューへ移動します。");
-        descriptions.put("‥", "（省略）: 任意機能の割当位置です。");
-        descriptions.put("PWR", "PWR: 電源/コントラスト — 電源操作やコントラスト調整を行います。");
-        descriptions.put("DIM", "DIM: バックライト（輝度）調整を行います。");
-        descriptions.put("DISP", "DISP: 表示モード切替 — リスト/位置/グラフィック/自船情報などを切替。");
-        descriptions.put("CLR", "CLR: クリア／戻る — メニュー戻りや入力取り消し、アラーム一時停止等。");
-        descriptions.put("ENTER", "ENTER: 決定／確定 — メニューや入力の確定に使用します。");
-        descriptions.put("↑", "↑: カーソル上移動");
-        descriptions.put("↓", "↓: カーソル下移動");
-        descriptions.put("←", "←: 左移動/スクロール");
-        descriptions.put("→", "→: 右移動/スクロール");
-
-        // =====================================================
-        // 左パネル（操作ボタン群）構築
-        // =====================================================
-        // SUB / MENU / DISP / CLR / 矢印 / ENTER ボタンを生成し
-        // 視覚的レイアウトを構成する
-        JPanel bottomLeft = new JPanel(new GridBagLayout());
-        GridBagConstraints gbcBL = new GridBagConstraints();
-        gbcBL.fill = GridBagConstraints.BOTH;
-        gbcBL.insets = new Insets(6, 6, 6, 6);
-
-        JPanel leftButtons = new JPanel(new GridLayout(2, 4, 8, 8));
-        String[] labels = {"USER", "SUB", "MENU", "‥", "PWR", "DIM", "DISP", "CLR"};
-        for (String label : labels) {
-            if ("‥".equals(label)) {
-                JLabel dummy = new JLabel("・・", SwingConstants.CENTER);
-                dummy.setForeground(Color.DARK_GRAY);
-                leftButtons.add(dummy);
-                continue;
-            }
-            RoundButton rb = createButtonWithRightPane(label, descriptions.get(label), rightPaneController);
-
-            // =====================================================
-            // InputController 初期化・接続
-            // =====================================================
-            // 入力イベントの解釈をすべて Controller に委譲する
-            // AISMain2 は UI 操作 API のみを提供する
-            // SUBボタンクリック時のマウスイベント
-            if ("SUB".equals(label)) {
-                rb.addActionListener(e -> inputController.onSubPressed());
-            }
-
-            // MENUボタンクリック時のマウスイベント
-            if ("MENU".equals(label)) {
-                rb.addActionListener(e -> inputController.onMenuPressed());
-            }
-
-            //　PWRボタンクリック時のマウスイベント
-            if ("PWR".equals(label)) {
-                rb.addActionListener(e -> System.exit(0));
-            }
-
-            // DISPボタンクリック時のマウスイベント
-            if ("DISP".equals(label)) {
-                rb.addActionListener(e -> inputController.onDispPressed());
-            }
-
-            //　CLRボタンクリック時のマウスイベント
-            if ("CLR".equals(label)) {
-                rb.addActionListener(e -> inputController.onClrPressed());
-            }
-
-            leftButtons.add(rb);
-        }
-
-        // 矢印パッド
-        JPanel arrowPad = new JPanel(new GridLayout(3, 3, 4, 4));
-
-        // ↑ ボタン
-        RoundButton upButton = createButtonWithRightPane("↑", descriptions.get("↑"), rightPaneController);
-        upButton.addActionListener(e -> inputController.onUpPressed());
-
-        arrowPad.add(new JLabel());
-        arrowPad.add(upButton);
-        upButton.setFocusable(false);
-        arrowPad.add(new JLabel());
-
-        // ← ボタン
-        RoundButton leftButton = createButtonWithRightPane("←", descriptions.get("←"), rightPaneController);
-        leftButton.addActionListener(e -> inputController.onLeftPressed());
-        arrowPad.add(leftButton);
-
-        // ENTER ボタン
-        RoundButton enterButton = createButtonWithRightPane("ENTER", descriptions.get("ENTER"), rightPaneController);
-        arrowPad.add(enterButton);
-
-        // → ボタン
-        RoundButton rightButton = createButtonWithRightPane("→", descriptions.get("→"), rightPaneController);
-        rightButton.addActionListener(e -> inputController.onRightPressed());
-        arrowPad.add(rightButton);
-
-        // ↓ ボタン
-        RoundButton downButton = createButtonWithRightPane("↓", descriptions.get("↓"), rightPaneController);
-        downButton.addActionListener(e -> inputController.onDownPressed());
-
-        arrowPad.add(new JLabel());
-        arrowPad.add(downButton);
-        downButton.setFocusable(false);
-        arrowPad.add(new JLabel());
-
-        // ENTERボタンのマウスクリックイベント
-        enterButton.addActionListener(evt -> inputController.onEnterPressed());
-
-        gbcBL.gridx = 0;
-        gbcBL.gridy = 0;
-        gbcBL.weightx = 0.7;
-        bottomLeft.add(leftButtons, gbcBL);
-
-        gbcBL.gridx = 1;
-        gbcBL.weightx = 0.3;
-        bottomLeft.add(arrowPad, gbcBL);
+        JPanel bottomLeft = ControlPanelFactory.create(inputController, rightPaneController);
 
         leftGbc.gridy = 2;
         leftGbc.weighty = 0.4;
@@ -1453,34 +1305,6 @@ public class AISMain2 {
     }
 
 
-    // ===== 右クリック説明生成 =====
-    private static RoundButton createButtonWithRightPane(String label, String description, RightPaneController rightPaneController) {
-        final RoundButton rb = new RoundButton(label);
-        final String desc = (description == null) ? "説明はありません" : description;
-        rb.addMouseListener(new MouseAdapter() {
-            @Override
-            public void mouseReleased(MouseEvent e) {
-                if (SwingUtilities.isRightMouseButton(e) || e.isPopupTrigger()) {
-                    if (lastButton == rb) {
-                        rightPaneController.clear();
-                        lastButton = null;
-                        return;
-                    }
-                    String extra = null;
-                    if ("PWR".equals(label)) {
-                        extra = "電源オフにはパスワード入力が必要な機種があります。";
-                    } else if ("DIM".equals(label)) {
-                        extra = "バックライトを最小にすると夜間で視認困難になる場合があります。";
-                    }
-                    rightPaneController.showButtonHelp(label, desc, extra);
-                    rb.requestFocusInWindow();
-                    lastButton = rb;
-                }
-            }
-        });
-        return rb;
-    }
-
     // 他船一覧表示の更新処理
     private void refreshTable() {
 
@@ -1497,7 +1321,7 @@ public class AISMain2 {
 
         ships.sort(Comparator.comparingDouble(
                 other -> NavigationUtil.calcRangeNm(
-                        ownLat, ownLon, other.lat, other.lon)
+                        ownLat, ownLon, other.getLat(), other.getLon())
         ));
 
         // ③ テーブル行データを生成
@@ -1506,20 +1330,20 @@ public class AISMain2 {
         for (ShipInfo other : ships) {
 
             double brg = NavigationUtil.calcBearingDeg(
-                    ownLat, ownLon, other.lat, other.lon);
+                    ownLat, ownLon, other.getLat(), other.getLon());
 
             double rng = NavigationUtil.calcRangeNm(
-                    ownLat, ownLon, other.lat, other.lon);
+                    ownLat, ownLon, other.getLat(), other.getLon());
 
             String etStr = String.format("%.0f", other.getETmin());
-            String name = (other.vesselName != null ? other.vesselName : "");
+            String name = other.getVesselName();
 
             rows.add(new Object[]{
                 String.format("%.0f", brg),
                 String.format("%.2f", rng),
                 etStr,
                 name,
-                other.mmsi
+                other.getMmsi()
             });
         }
 

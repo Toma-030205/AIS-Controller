@@ -26,6 +26,10 @@ public interface ScreenInputHandler {
         return false;
     }
 
+    default boolean onDisp() {
+        return false;
+    }
+
     default boolean onEnter() {
         return false;
     }

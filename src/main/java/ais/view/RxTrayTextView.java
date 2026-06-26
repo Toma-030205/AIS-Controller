@@ -52,7 +52,7 @@ public class RxTrayTextView extends JPanel {
             return;
         }
 
-        textArea.setText(msg.text);
+        textArea.setText(msg.getText());
         textArea.setCaretPosition(0);
     }
 }

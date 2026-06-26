@@ -205,20 +205,18 @@ public class MessageWorkflow {
 
     public TxMessage buildTxMessageFromEdit() {
         TxMessage msg = new TxMessage();
-
-        msg.format = ui.getEditAndTxModel().getFormat();
-        msg.category = ui.getEditAndTxModel().getCategory();
-        msg.reply = ui.getEditAndTxModel().getReply() == EditAndTxModel.Reply.ON;
-        msg.function = ui.getEditAndTxModel().getFunction().name();
-        msg.channel = ui.getEditAndTxModel().getChannel().ordinal();
-
-        if (msg.format == EditAndTxModel.Format.ADDRESSED) {
-            msg.destination = ui.getEditAndTxModel().getMmsiText();
-        } else {
-            msg.destination = "BROADCAST";
-        }
-
-        msg.text = ui.getEditAndTxModel().getText();
+        EditAndTxModel editModel = ui.getEditAndTxModel();
+        String destination = editModel.getFormat() == EditAndTxModel.Format.ADDRESSED
+                ? editModel.getMmsiText()
+                : "BROADCAST";
+        msg.configure(
+                editModel.getFormat(),
+                editModel.getCategory(),
+                editModel.getReply() == EditAndTxModel.Reply.ON,
+                editModel.getFunction().name(),
+                editModel.getChannel().ordinal(),
+                destination,
+                editModel.getText());
         return msg;
     }
 

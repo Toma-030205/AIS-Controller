@@ -357,31 +357,15 @@ public class EditAndTxModel implements CursorEditableModel {
     public TxMessage buildTxMessage() {
 
         TxMessage msg = new TxMessage();
-
-        /* ===== 種別 ===== */
-        msg.format = (format == Format.BROADCAST)
-                ? EditAndTxModel.Format.BROADCAST
-                : EditAndTxModel.Format.ADDRESSED;
-
-        msg.category = (category == Category.SAFETY)
-                ? EditAndTxModel.Category.SAFETY
-                : EditAndTxModel.Category.ROUTINE;
-
-        msg.function = function.name();
-        msg.reply = (reply == Reply.ON);
-        msg.channel = channel.ordinal();
-
-        /* ===== 宛先 ===== */
-        if (format == Format.BROADCAST) {
-            msg.destination = "BROADCAST";
-        } else {
-            msg.destination = new String(mmsi);
-        }
-
-        /* ===== 本文 ===== */
-        msg.text = text;
-
-        /* ===== SAVE 状態として確定 ===== */
+        String destination = (format == Format.BROADCAST) ? "BROADCAST" : new String(mmsi);
+        msg.configure(
+                format,
+                category,
+                reply == Reply.ON,
+                function.name(),
+                channel.ordinal(),
+                destination,
+                text);
         msg.markSaved();
 
         return msg;
@@ -400,27 +384,27 @@ public class EditAndTxModel implements CursorEditableModel {
 
         // ===== MMSI =====
         if (msg.isAddressed()) {
-            char[] src = msg.source.toCharArray();
+            char[] src = msg.getSource().toCharArray();
             for (int i = 0; i < mmsi.length && i < src.length; i++) {
                 mmsi[i] = src[i];
             }
         }
 
         // ===== CATEGORY =====
-        category = Category.valueOf(msg.category.name());
+        category = Category.valueOf(msg.getCategory());
 
         // ===== FUNCTION =====
         // 指示どおり固定
         function = Function.TEXT;
 
         // ===== REPLY =====
-        reply = msg.reply ? Reply.ON : Reply.OFF;
+        reply = Reply.valueOf(msg.getReply());
 
         // ===== CHANNEL =====
         channel = Channel.valueOf(msg.getChannel());
 
         // ===== TEXT =====
-        text = msg.text;
+        text = msg.getText();
     }
 
 

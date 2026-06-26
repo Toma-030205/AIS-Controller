@@ -94,21 +94,21 @@ public class GraphicView extends JPanel {
         // --- NavigationUtil を使用 ---
         double brg = NavigationUtil.calcBearingDeg(
                 own.lat, own.lon,
-                ship.lat, ship.lon
+                ship.getLat(), ship.getLon()
         );
 
         double rng = NavigationUtil.calcRangeNm(
                 own.lat, own.lon,
-                ship.lat, ship.lon
+                ship.getLat(), ship.getLon()
         );
 
         // --- 表示 ---
-        lblName.setText(ship.vesselName);
+        lblName.setText(ship.getVesselName());
         lblBrg.setText(String.format("BRG°  : %05.1f°", brg));
         lblRng.setText(String.format("RNG   : %6.2f NM", rng));
-        lblHdg.setText(String.format("HDG   : %03.1f°", ship.trueHeading));
-        lblSog.setText(String.format("SOG   : %.1f kn ", ship.sog));
-        lblCog.setText(String.format("COG   : %.1f°", ship.cog));
+        lblHdg.setText(String.format("HDG   : %03.1f°", ship.getTrueHeading()));
+        lblSog.setText(String.format("SOG   : %.1f kn ", ship.getSog()));
+        lblCog.setText(String.format("COG   : %.1f°", ship.getCog()));
     }
 
 

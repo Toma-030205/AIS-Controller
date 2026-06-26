@@ -43,7 +43,7 @@ public class TextViewScreen extends JPanel {
      * ===================================================== */
 
     public void setMessage(TxMessage msg) {
-        textArea.setText(msg.text);
+        textArea.setText(msg.getText());
         textArea.setCaretPosition(0);
     }
 }
