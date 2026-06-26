@@ -90,12 +90,16 @@ public class AisDecoder {
     }
 
     public static AisMessage decode(String nmea) {
-        if (nmea == null) return null;
+        return decodeOptional(nmea).orElse(null);
+    }
+
+    public static Optional<AisMessage> decodeOptional(String nmea) {
+        if (nmea == null) return Optional.empty();
         nmea = nmea.trim();
-        if (!(nmea.startsWith("!AIVDM") || nmea.startsWith("!AIVDO"))) return null;
+        if (!(nmea.startsWith("!AIVDM") || nmea.startsWith("!AIVDO"))) return Optional.empty();
 
         String[] parts = nmea.split(",", -1);
-        if (parts.length < 7) return null;
+        if (parts.length < 7) return Optional.empty();
 
         int total = tryParse(parts[1], 1);
         int num = tryParse(parts[2], 1);
@@ -110,7 +114,7 @@ public class AisDecoder {
             if (fill > 0 && fill < bits.length()) {
                 bits = bits.substring(0, bits.length() - fill);
             }
-            return build(bits);
+            return Optional.ofNullable(build(bits));
         }
 
         // マルチフラグメント
@@ -128,11 +132,11 @@ public class AisDecoder {
             } else {
                 // 異常 fragment number → リセット
                 fragmentBuffer.remove(key);
-                return null;
+                return Optional.empty();
             }
 
             if (fe.received < fe.total) {
-                return null;  // まだ揃っていない
+                return Optional.empty();  // まだ揃っていない
             }
 
             // 全部揃った ⇒ 結合
@@ -140,7 +144,7 @@ public class AisDecoder {
             for (String p : fe.parts) {
                 if (p == null) {
                     fragmentBuffer.remove(key);
-                    return null;
+                    return Optional.empty();
                 }
                 sb.append(p);
             }
@@ -150,13 +154,10 @@ public class AisDecoder {
             if (fe.lastFillBits > 0 && fe.lastFillBits < bits.length()) {
                 bits = bits.substring(0, bits.length() - fe.lastFillBits);
             }
-            return build(bits);
+            return Optional.ofNullable(build(bits));
         }
     }
 
-    public static Optional<AisMessage> decodeOptional(String nmea) {
-        return Optional.ofNullable(decode(nmea));
-    }
 
     private static int tryParse(String s, int def) {
         try { return Integer.parseInt(s); }

@@ -1,7 +1,7 @@
 package ais.model;
 
 
-public class CommunicationTestModel implements TransmissionStateModel {
+public class CommunicationTestModel implements CursorEditableModel, TransmissionStateModel {
 
     /* =====================================================
      * 行定義
@@ -87,6 +87,10 @@ public class CommunicationTestModel implements TransmissionStateModel {
     public boolean onClr() {
         reset();
         return true;    // MAINTENANCE へ戻る
+    }
+
+    public void enter() {
+        // COMMUNICATION TEST の Enter は画面側の Action 行で処理する。
     }
 
     public void reset() {

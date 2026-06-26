@@ -64,6 +64,12 @@ public class OwnShipInfo {
         this.navStatus = navStatus;
     }
 
+    public void setPositionAndHeading(double lat, double lon, double heading) {
+        this.lat = lat;
+        this.lon = lon;
+        this.heading = heading;
+    }
+
     /* --- ETA --- */
     public void setEta(int m, int d, int h, int min) {
         this.etaMonth = m;

@@ -10,13 +10,10 @@ import ais.model.DraughtInputModel;
 import ais.model.EditAndTxModel;
 import ais.model.ETAInputModel;
 import ais.model.InterrogationModel;
-import ais.model.NavStatus;
 import ais.model.OwnShipInfo;
 import ais.model.PersonsInputModel;
-import ais.model.RxMessage;
 import ais.model.RxTrayModel;
 import ais.model.SelfDiagnosisModel;
-import ais.model.settingItem;
 import ais.model.ShipInfo;
 import ais.model.ShipManager;
 import ais.model.ShipTypeCargoInputModel;
@@ -25,10 +22,8 @@ import ais.model.TextEditModel;
 import ais.model.TxMessage;
 import ais.model.TxTrayModel;
 import ais.model.VoyageEditSession;
-import ais.network.AisUdpBroadcaster;
 import ais.network.UdpReceiver;
 import ais.util.NavigationUtil;
-import ais.util.OwnShipJsonUtil;
 import ais.util.Paginator;
 import ais.view.AISAlarmCurrentView;
 import ais.view.BearingView;
@@ -82,10 +77,12 @@ import ais.view.TXTrayListView;
 import ais.view.TXTraySubMenuView;
 import ais.view.VoyageSubView;
 import ais.view.VoyageView;
+import ais.workflow.MaintenanceWorkflow;
+import ais.workflow.MessageWorkflow;
+import ais.workflow.VoyageWorkflow;
 import java.awt.*;
 import java.awt.event.*;
 import java.util.*;
-import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.swing.*;
 import javax.swing.event.HyperlinkEvent;
@@ -105,7 +102,7 @@ public class AISMain2 {
     /* =====================================================
      * フレーム・レイアウト基盤
      * ===================================================== */
-    private JFrame frame;
+    private MainFrame mainFrame;
     private JPanel cardPanel;
     private JTextArea textArea;
 
@@ -151,7 +148,7 @@ public class AISMain2 {
     private CommunicationTxView communicationTxView;
     private AISAlarmCurrentView aisAlarmCurrentView;
     private AISAlarmModel aisAlarmModel;
-    
+
     private VoyageView voyageView;
     private VoyageSubView voyageSubView;
     private NavStatusView navStatusView;
@@ -191,7 +188,9 @@ public class AISMain2 {
      * ===================================================== */
     private InputController inputController;
     private static RoundButton lastButton = null;
-    private VoyageEditSession voyageSession;
+    private MaintenanceWorkflow maintenanceWorkflow;
+    private MessageWorkflow messageWorkflow;
+    private VoyageWorkflow voyageWorkflow;
 
     /* =====================================================
      * 右ペイン（説明表示）
@@ -199,6 +198,7 @@ public class AISMain2 {
     private JEditorPane infoPane;
     private JScrollPane infoScroll;
     private RightPaneController rightPaneController;
+    private ScreenNavigator screenNavigator;
 
     /* =====================================================
      * データ管理
@@ -209,7 +209,6 @@ public class AISMain2 {
     /* =====================================================
      * 画面状態管理
      * ===================================================== */
-    private ScreenId currentScreen;
 
     /* =====================================================
      * 他船一覧・ページング関連
@@ -226,9 +225,9 @@ public class AISMain2 {
     private Paginator trxPager = new Paginator(1, 4);
 
     /* =====================================================
-     * 
+     *
      * ===================================================== */
-    
+
 
     public AISMain2() {
         shipManager = ShipManager.getInstance();
@@ -254,11 +253,7 @@ public class AISMain2 {
         // アプリケーション全体のウィンドウ設定と
         // CardLayout を持つメインパネルを初期化する
 
-        this.frame = new JFrame("AISコントローラ");
-        frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        frame.setExtendedState(JFrame.MAXIMIZED_BOTH); // 起動時に最大化
-        frame.setLayout(new GridBagLayout());
-        GridBagConstraints gbc = new GridBagConstraints();
+        this.mainFrame = new MainFrame("AISコントローラ");
 
         // ===== 左パネル =====
         JPanel leftPanel = new JPanel(new GridBagLayout());
@@ -294,151 +289,36 @@ public class AISMain2 {
         this.cardPanel = new JPanel(new CardLayout());
         cardPanel.setPreferredSize(new Dimension(400, 200));
         cardPanel.setBorder(BorderFactory.createLineBorder(Color.DARK_GRAY, 2));
+        ScreenRegistry screenRegistry = new ScreenRegistry(cardPanel);
 
         // ★従来のテキストエリア（Card1 として登録）
-        cardPanel.add(scrollPane, ScreenId.TEXT.cardName());
+        screenRegistry.register(ScreenId.TEXT, scrollPane);
 
         myship = ShipManager.getInstance().getOwnShip();
-        
+
 
         // =====================================================
         // 各画面 View インスタンス生成
         // =====================================================
         // CardLayout に登録する各画面の View を生成する
         // （この時点では表示・遷移は行わない）
-        shipListView = new ShipListView();                     // 他船一覧表示 
-        menuView = new MenuView();                             // MainMENU 表示
-        messageMenuView = new MessageMenuView();               // MESSAGE MENU
-        editAndTxModel = new EditAndTxModel();
-        editAndTxView = new EditAndTxView(editAndTxModel);
-        editAndTxSubMenuView = new EditAndTxSubMenuView();
-        textEditView = new TextEditView(textEditModel);
-        txConfirmView = new EditAndTxTxConfirmView();
-        txTransmittingView = new TxTransmittingView();
-        txResultView = new TxResultView();
-        txTrayModel = new TxTrayModel();
-        txTrayListView = new TXTrayListView();
-        txTraySubMenuView = new TXTraySubMenuView();
-        txTextView = new TextViewScreen();
-        txMessageDetailView = new TXMessageDetailView();
-        rxTrayModel = new RxTrayModel();
-        rxTrayListView = new RxTrayListView();
-        rxTraySubMenuView = new RxTraySubMenuView();
-        rxTrayTextView = new RxTrayTextView();
-        rxTrayDetailView = new RxTrayDetailView();
-        interrogationModel = new InterrogationModel();
-        interrogationView = new InterrogationView(interrogationModel);
-        interrogationSubMenuView = new InterrogationSubMenuView();
-        interrogationTxView = new InterrogationTxView();
-        interrogationTxResultView = new InterrogationTxResultView();
-        maintenanceMenuView = new MaintenanceMenuView();
-        selfDiagnosisModel = new SelfDiagnosisModel();
-        selfDiagnosisView = new SelfDiagnosisView();
-        transponderLogView = new TransponderLogView();
-        controllerLogView = new ControllerLogView("CONTROLLER");
-        controllerLanLogView = new ControllerLogView("CONTROLLER LAN");
-        diagnosisLogModel = new DiagnosisLogModel();
-        communicationAckPopupView = new CommunicationAckPopupView();
-        communicationTestView = new CommunicationTestView();
-        communicationTestModel = new CommunicationTestModel();
-        communicationTxView = new CommunicationTxView();
-        aisAlarmCurrentView = new AISAlarmCurrentView();
-
-        aisAlarmModel = new AISAlarmModel();
-
-        voyageView = new VoyageView(myship);                   // VOYAGE DATA 用 JList
-        voyageSubView = new VoyageSubView();                   // VOYAGE DATA SUB MENU JList
-        navStatusView = new NavStatusView();                   // 航行状態設定用 JList
-        otherShipDetailView = new OtherShipDetailView();       // 他船詳細表示用
-        otherShipSubMenuView = new OtherShipSubMenuView();     // 他船詳細表示用 SUB MENU JList
-        graphicView = new GraphicView();                       // グラフィック画面用
-        ownShipDetail1View = new OwnShipDetail1View();         // 自船詳細表示１画面用
-        ownShipDetail2View = new OwnShipDetail2View();         // 自船詳細表示２画面用
-        ownShipTRXView = new OwnShipTRXView();                 // 自船無線運用画面用
-        PosnTimeView = new PosnTimeView();                     // 位置/日時画面用
-        listSubView = new ListSubView();                       // 他船一覧表示用 SUB MENU JList
-        bearingView = new BearingView();                       // 他船一覧表示用 SUB MENU BEARING設定画面用
-        sortView = new SORTView();                             //   他船一覧表示用 SUB MENU SORT設定画面用
-        nameView = new NAMEView();                             // 他船一覧表示用 SUB MENU NAME設定画面用
-        dispView = new DISPView();                             // 他船一覧表示用 SUB MENU DISP設定画面用
-        destinationInputView = new DestinationInputView();     // 目的地入力文字パッド
-        etaInputModel = new ETAInputModel();                   // ETAの設定画面
-        etaInputView = new ETAInputView(etaInputModel);
-        draughtInputModel = new DraughtInputModel();           // 喫水の設定
-        draughtInputView = new DraughtInputView(draughtInputModel);
-        personsInputModel = new PersonsInputModel();           // 搭乗人員設定
-        personsInputView = new PersonsInputView(personsInputModel);
-        shipTypeUSInputModel = new ShipTypeUSInputModel();     // Ship Type U.S. 搭乗人員数設定
-        shipTypeUSInputView = new ShipTypeUSInputView(shipTypeUSInputModel);
-        shipTypeCargoModel = new ShipTypeCargoInputModel();    // 船種、積載物、状態の設定
-        shipTypeCargoView = new ShipTypeCargoInputView(shipTypeCargoModel);
-        destinationLoadView = new DestinationLoadView();       // DEST LOAD
-        destinationLoadModel = new DestinationLoadModel();
+        initializeViews();
 
         // =====================================================
         // CardLayout への画面登録
         // =====================================================
         //画面名（card 名）と View を対応付けて登録する
         // 遷移判断は Controller 側で行う
-        cardPanel.add(shipListView, ScreenId.LIST.cardName());
-        cardPanel.add(menuView, ScreenId.MENU.cardName());
-        cardPanel.add(messageMenuView, ScreenId.MESSAGE.cardName());
-        cardPanel.add(editAndTxView, ScreenId.EDIT_AND_TX.cardName());
-        cardPanel.add(editAndTxSubMenuView, ScreenId.EDIT_AND_TX_SUB.cardName());
-        cardPanel.add(textEditView, ScreenId.TEXT_EDIT.cardName());
-        cardPanel.add(txConfirmView, ScreenId.EDIT_AND_TX_TX_CONFIRM.cardName());
-        cardPanel.add(txTransmittingView, ScreenId.EDIT_AND_TX_TX_TRANSMITTING.cardName());
-        cardPanel.add(txResultView, ScreenId.EDIT_AND_TX_TX_RESULT.cardName());
-        cardPanel.add(txTrayListView, ScreenId.TX_TRAY.cardName());
-        cardPanel.add(txTextView, ScreenId.TX_TRAY_TEXT.cardName());
-        cardPanel.add(txTraySubMenuView, ScreenId.TX_TRAY_SUB.cardName());
-        cardPanel.add(txMessageDetailView, ScreenId.TX_TRAY_DETAIL.cardName());
-        cardPanel.add(rxTrayListView, ScreenId.RX_TRAY.cardName());
-        cardPanel.add(rxTraySubMenuView, ScreenId.RX_TRAY_SUB.cardName());
-        cardPanel.add(rxTrayTextView, ScreenId.RX_TRAY_TEXT.cardName());
-        cardPanel.add(rxTrayDetailView, ScreenId.RX_TRAY_DETAIL.cardName());
-        cardPanel.add(interrogationView, ScreenId.INTERROGATION.cardName());
-        cardPanel.add(interrogationSubMenuView, ScreenId.INTERROGATION_SUB.cardName());
-        cardPanel.add(interrogationTxView, ScreenId.INTERROGATION_TX.cardName());
-        cardPanel.add(interrogationTxResultView, ScreenId.INTERROGATION_TX_RESULT.cardName());
-        cardPanel.add(maintenanceMenuView, ScreenId.MAINTENANCE_MENU.cardName());
-        cardPanel.add(selfDiagnosisView, ScreenId.SELF_DIAGNOSIS.cardName());
-        cardPanel.add(transponderLogView, ScreenId.TRANSPONDER_LOG.cardName());
-        cardPanel.add(controllerLogView, ScreenId.CONTROLLER_LOG.cardName());
-        cardPanel.add(controllerLanLogView, ScreenId.CONTROLLER_LAN_LOG.cardName());
-        cardPanel.add(communicationAckPopupView, ScreenId.COMMUNICATION_ACK_POPUP.cardName());
-        cardPanel.add(communicationTestView, ScreenId.COMMUNICATION_TEST.cardName());
-        cardPanel.add(communicationTxView, ScreenId.COMMUNICATION_TEST_TX.cardName());
-        cardPanel.add(aisAlarmCurrentView, ScreenId.AIS_ALARM.cardName());
-        
+        registerScreens(screenRegistry);
+        screenNavigator = new ScreenNavigator(cardPanel, this::focusScreen);
+        maintenanceWorkflow = new MaintenanceWorkflow(this);
+        messageWorkflow = new MessageWorkflow(this);
+        voyageWorkflow = new VoyageWorkflow(this);
+        inputController = new InputController(this);
 
-        cardPanel.add(voyageView, ScreenId.VOYAGE.cardName());
-        cardPanel.add(voyageSubView, ScreenId.VOYAGE_SUB.cardName());
-        cardPanel.add(navStatusView, ScreenId.NAV_STATUS.cardName());
-        cardPanel.add(otherShipDetailView, ScreenId.OTHER_DETAIL.cardName());
-        cardPanel.add(otherShipSubMenuView, ScreenId.OTHER_DETAIL_SUB.cardName());
-        cardPanel.add(graphicView, ScreenId.GRAPHIC.cardName());
-        cardPanel.add(ownShipDetail1View, ScreenId.OWN_DETAIL1.cardName());
-        cardPanel.add(ownShipDetail2View, ScreenId.OWN_DETAIL2.cardName());
-        cardPanel.add(ownShipTRXView, ScreenId.OWN_TRX.cardName());
-        cardPanel.add(PosnTimeView, ScreenId.POSN_TIME.cardName());
-        cardPanel.add(listSubView, ScreenId.LIST_SUB.cardName());
-        cardPanel.add(bearingView, ScreenId.BEARING.cardName());
-        cardPanel.add(sortView, ScreenId.SORT.cardName());
-        cardPanel.add(nameView, ScreenId.NAME.cardName());
-        cardPanel.add(dispView, ScreenId.DISP.cardName());
-        cardPanel.add(destinationInputView, ScreenId.DESTINATION.cardName());
-        cardPanel.add(etaInputView, ScreenId.ETA.cardName());
-        cardPanel.add(draughtInputView, ScreenId.DRAUGHT.cardName());
-        cardPanel.add(personsInputView, ScreenId.PERSONS.cardName());
-        cardPanel.add(shipTypeUSInputView, ScreenId.SHIP_TYPE_US.cardName());
-        cardPanel.add(shipTypeCargoView, ScreenId.SHIP_TYPE_CARGO.cardName());
-        cardPanel.add(destinationLoadView, ScreenId.DESTINATION_LOAD.cardName());
 
-        
 
         // 初期表示はリストにする
-        CardLayout cl = (CardLayout) cardPanel.getLayout();
         showCard(ScreenId.LIST);
 
         // === レイアウトへ反映 ===
@@ -454,6 +334,7 @@ public class AISMain2 {
         // JEditorPane + ScrollPane を初期化
         this.infoPane = new JEditorPane();
         this.rightPaneController = new RightPaneController(infoPane);
+        screenNavigator.setRightPaneController(rightPaneController);
         infoPane.setContentType("text/html");
         infoPane.setEditable(false);
         infoPane.setText("<html><body style='padding:12px;color:#404040;font-family:Sans-Serif;'></body></html>");
@@ -463,7 +344,7 @@ public class AISMain2 {
                 String desc = e.getDescription();
                 if (desc != null) {
                     if (desc.startsWith("#")) {
-                        desc = desc.substring(1); 
+                        desc = desc.substring(1);
                     }else if (desc.contains("#")) {
                         desc = desc.substring(desc.indexOf('#') + 1);
                     }
@@ -521,8 +402,6 @@ public class AISMain2 {
             // =====================================================
             // 入力イベントの解釈をすべて Controller に委譲する
             // AISMain2 は UI 操作 API のみを提供する
-            this.inputController = new InputController(this);
-
             // SUBボタンクリック時のマウスイベント
             if ("SUB".equals(label)) {
                 rb.addActionListener(e -> inputController.onSubPressed());
@@ -602,32 +481,167 @@ public class AISMain2 {
         leftGbc.weighty = 0.4;
         leftPanel.add(bottomLeft, leftGbc);
 
-        // === 配置 ===
-        gbc.fill = GridBagConstraints.BOTH;
-        gbc.weighty = 1.0;
-        gbc.gridx = 0;
-        gbc.weightx = 0.9;
-        frame.add(leftPanel, gbc);
+        // === Layout ===
+        mainFrame.addLeftPanel(leftPanel);
+        mainFrame.addRightPanel(rightPanel);
+        mainFrame.show();
 
-        gbc.gridx = 1;
-        gbc.weightx = 0.7;
-        frame.add(rightPanel, gbc);
+    }
 
-        frame.setVisible(true);
+    private void initializeViews() {
+        shipListView = new ShipListView();                     // 他船一覧表示
+        menuView = new MenuView();                             // MainMENU 表示
+        messageMenuView = new MessageMenuView();               // MESSAGE MENU
+        editAndTxModel = new EditAndTxModel();
+        editAndTxView = new EditAndTxView(editAndTxModel);
+        editAndTxSubMenuView = new EditAndTxSubMenuView();
+        textEditView = new TextEditView(textEditModel);
+        txConfirmView = new EditAndTxTxConfirmView();
+        txTransmittingView = new TxTransmittingView();
+        txResultView = new TxResultView();
+        txTrayModel = new TxTrayModel();
+        txTrayListView = new TXTrayListView();
+        txTraySubMenuView = new TXTraySubMenuView();
+        txTextView = new TextViewScreen();
+        txMessageDetailView = new TXMessageDetailView();
+        rxTrayModel = new RxTrayModel();
+        rxTrayListView = new RxTrayListView();
+        rxTraySubMenuView = new RxTraySubMenuView();
+        rxTrayTextView = new RxTrayTextView();
+        rxTrayDetailView = new RxTrayDetailView();
+        interrogationModel = new InterrogationModel();
+        interrogationView = new InterrogationView(interrogationModel);
+        interrogationSubMenuView = new InterrogationSubMenuView();
+        interrogationTxView = new InterrogationTxView();
+        interrogationTxResultView = new InterrogationTxResultView();
+        maintenanceMenuView = new MaintenanceMenuView();
+        selfDiagnosisModel = new SelfDiagnosisModel();
+        selfDiagnosisView = new SelfDiagnosisView();
+        transponderLogView = new TransponderLogView();
+        controllerLogView = new ControllerLogView("CONTROLLER");
+        controllerLanLogView = new ControllerLogView("CONTROLLER LAN");
+        diagnosisLogModel = new DiagnosisLogModel();
+        communicationAckPopupView = new CommunicationAckPopupView();
+        communicationTestView = new CommunicationTestView();
+        communicationTestModel = new CommunicationTestModel();
+        communicationTxView = new CommunicationTxView();
+        aisAlarmCurrentView = new AISAlarmCurrentView();
 
+        aisAlarmModel = new AISAlarmModel();
+
+        voyageView = new VoyageView(myship);                   // VOYAGE DATA 用 JList
+        voyageSubView = new VoyageSubView();                   // VOYAGE DATA SUB MENU JList
+        navStatusView = new NavStatusView();                   // 航行状態設定用 JList
+        otherShipDetailView = new OtherShipDetailView();       // 他船詳細表示用
+        otherShipSubMenuView = new OtherShipSubMenuView();     // 他船詳細表示用 SUB MENU JList
+        graphicView = new GraphicView();                       // グラフィック画面用
+        ownShipDetail1View = new OwnShipDetail1View();         // 自船詳細表示１画面用
+        ownShipDetail2View = new OwnShipDetail2View();         // 自船詳細表示２画面用
+        ownShipTRXView = new OwnShipTRXView();                 // 自船無線運用画面用
+        PosnTimeView = new PosnTimeView();                     // 位置/日時画面用
+        listSubView = new ListSubView();                       // 他船一覧表示用 SUB MENU JList
+        bearingView = new BearingView();                       // 他船一覧表示用 SUB MENU BEARING設定画面用
+        sortView = new SORTView();                             //   他船一覧表示用 SUB MENU SORT設定画面用
+        nameView = new NAMEView();                             // 他船一覧表示用 SUB MENU NAME設定画面用
+        dispView = new DISPView();                             // 他船一覧表示用 SUB MENU DISP設定画面用
+        destinationInputView = new DestinationInputView();     // 目的地入力文字パッド
+        etaInputModel = new ETAInputModel();                   // ETAの設定画面
+        etaInputView = new ETAInputView(etaInputModel);
+        draughtInputModel = new DraughtInputModel();           // 喫水の設定
+        draughtInputView = new DraughtInputView(draughtInputModel);
+        personsInputModel = new PersonsInputModel();           // 搭乗人員設定
+        personsInputView = new PersonsInputView(personsInputModel);
+        shipTypeUSInputModel = new ShipTypeUSInputModel();     // Ship Type U.S. 搭乗人員数設定
+        shipTypeUSInputView = new ShipTypeUSInputView(shipTypeUSInputModel);
+        shipTypeCargoModel = new ShipTypeCargoInputModel();    // 船種、積載物、状態の設定
+        shipTypeCargoView = new ShipTypeCargoInputView(shipTypeCargoModel);
+        destinationLoadView = new DestinationLoadView();       // DEST LOAD
+        destinationLoadModel = new DestinationLoadModel();
+
+    }
+
+    private void registerScreens(ScreenRegistry screenRegistry) {
+        screenRegistry.register(ScreenId.LIST, shipListView);
+        screenRegistry.register(ScreenId.MENU, menuView);
+        screenRegistry.register(ScreenId.MESSAGE, messageMenuView);
+        screenRegistry.register(ScreenId.EDIT_AND_TX, editAndTxView);
+        screenRegistry.register(ScreenId.EDIT_AND_TX_SUB, editAndTxSubMenuView);
+        screenRegistry.register(ScreenId.TEXT_EDIT, textEditView);
+        screenRegistry.register(ScreenId.EDIT_AND_TX_TX_CONFIRM, txConfirmView);
+        screenRegistry.register(ScreenId.EDIT_AND_TX_TX_TRANSMITTING, txTransmittingView);
+        screenRegistry.register(ScreenId.EDIT_AND_TX_TX_RESULT, txResultView);
+        screenRegistry.register(ScreenId.TX_TRAY, txTrayListView);
+        screenRegistry.register(ScreenId.TX_TRAY_TEXT, txTextView);
+        screenRegistry.register(ScreenId.TX_TRAY_SUB, txTraySubMenuView);
+        screenRegistry.register(ScreenId.TX_TRAY_DETAIL, txMessageDetailView);
+        screenRegistry.register(ScreenId.RX_TRAY, rxTrayListView);
+        screenRegistry.register(ScreenId.RX_TRAY_SUB, rxTraySubMenuView);
+        screenRegistry.register(ScreenId.RX_TRAY_TEXT, rxTrayTextView);
+        screenRegistry.register(ScreenId.RX_TRAY_DETAIL, rxTrayDetailView);
+        screenRegistry.register(ScreenId.INTERROGATION, interrogationView);
+        screenRegistry.register(ScreenId.INTERROGATION_SUB, interrogationSubMenuView);
+        screenRegistry.register(ScreenId.INTERROGATION_TX, interrogationTxView);
+        screenRegistry.register(ScreenId.INTERROGATION_TX_RESULT, interrogationTxResultView);
+        screenRegistry.register(ScreenId.MAINTENANCE_MENU, maintenanceMenuView);
+        screenRegistry.register(ScreenId.SELF_DIAGNOSIS, selfDiagnosisView);
+        screenRegistry.register(ScreenId.TRANSPONDER_LOG, transponderLogView);
+        screenRegistry.register(ScreenId.CONTROLLER_LOG, controllerLogView);
+        screenRegistry.register(ScreenId.CONTROLLER_LAN_LOG, controllerLanLogView);
+        screenRegistry.register(ScreenId.COMMUNICATION_ACK_POPUP, communicationAckPopupView);
+        screenRegistry.register(ScreenId.COMMUNICATION_TEST, communicationTestView);
+        screenRegistry.register(ScreenId.COMMUNICATION_TEST_TX, communicationTxView);
+        screenRegistry.register(ScreenId.AIS_ALARM, aisAlarmCurrentView);
+        screenRegistry.register(ScreenId.VOYAGE, voyageView);
+        screenRegistry.register(ScreenId.VOYAGE_SUB, voyageSubView);
+        screenRegistry.register(ScreenId.NAV_STATUS, navStatusView);
+        screenRegistry.register(ScreenId.OTHER_DETAIL, otherShipDetailView);
+        screenRegistry.register(ScreenId.OTHER_DETAIL_SUB, otherShipSubMenuView);
+        screenRegistry.register(ScreenId.GRAPHIC, graphicView);
+        screenRegistry.register(ScreenId.OWN_DETAIL1, ownShipDetail1View);
+        screenRegistry.register(ScreenId.OWN_DETAIL2, ownShipDetail2View);
+        screenRegistry.register(ScreenId.OWN_TRX, ownShipTRXView);
+        screenRegistry.register(ScreenId.POSN_TIME, PosnTimeView);
+        screenRegistry.register(ScreenId.LIST_SUB, listSubView);
+        screenRegistry.register(ScreenId.BEARING, bearingView);
+        screenRegistry.register(ScreenId.SORT, sortView);
+        screenRegistry.register(ScreenId.NAME, nameView);
+        screenRegistry.register(ScreenId.DISP, dispView);
+        screenRegistry.register(ScreenId.DESTINATION, destinationInputView);
+        screenRegistry.register(ScreenId.ETA, etaInputView);
+        screenRegistry.register(ScreenId.DRAUGHT, draughtInputView);
+        screenRegistry.register(ScreenId.PERSONS, personsInputView);
+        screenRegistry.register(ScreenId.SHIP_TYPE_US, shipTypeUSInputView);
+        screenRegistry.register(ScreenId.SHIP_TYPE_CARGO, shipTypeCargoView);
+        screenRegistry.register(ScreenId.DESTINATION_LOAD, destinationLoadView);
     }
 
     // ===== Getter メソッド群 =====
     public String getCurrentCard() {
-        return currentScreen == null ? null : currentScreen.cardName();
+        return screenNavigator.getCurrentCard();
     }
 
     public ScreenId getCurrentScreen() {
-        return currentScreen;
+        return screenNavigator.getCurrentScreen();
     }
 
     public OwnShipInfo getOwnShipInfo() {
         return myship;
+    }
+
+    public ShipManager getShipManager() {
+        return shipManager;
+    }
+
+    public VoyageWorkflow getVoyageWorkflow() {
+        return voyageWorkflow;
+    }
+
+    public MessageWorkflow getMessageWorkflow() {
+        return messageWorkflow;
+    }
+
+    public MaintenanceWorkflow getMaintenanceWorkflow() {
+        return maintenanceWorkflow;
     }
 
     public ShipListView getShipListView() {
@@ -658,6 +672,10 @@ public class AISMain2 {
         return textEditView;
     }
 
+    public void setTextEditModel(TextEditModel textEditModel) {
+        this.textEditModel = textEditModel;
+    }
+
     public EditAndTxTxConfirmView getTxConfirmView() {
         return txConfirmView;
     }
@@ -671,6 +689,18 @@ public class AISMain2 {
         return txTraySubMenuView;
     }
 
+    public TxTrayModel getTxTrayModel() {
+        return txTrayModel;
+    }
+
+    public TextViewScreen getTxTextView() {
+        return txTextView;
+    }
+
+    public TXMessageDetailView getTxMessageDetailView() {
+        return txMessageDetailView;
+    }
+
     public TxResultView getTxResultView() {
         return txResultView;
     }
@@ -682,6 +712,18 @@ public class AISMain2 {
 
     public RxTraySubMenuView getRxTraySubMenuView() {
         return rxTraySubMenuView;
+    }
+
+    public RxTrayModel getRxTrayModel() {
+        return rxTrayModel;
+    }
+
+    public RxTrayTextView getRxTrayTextView() {
+        return rxTrayTextView;
+    }
+
+    public RxTrayDetailView getRxTrayDetailView() {
+        return rxTrayDetailView;
     }
 
     /* ===== INTERROGATION Getter ===== */
@@ -738,6 +780,10 @@ public class AISMain2 {
         return communicationTxView;
     }
 
+    public CommunicationAckPopupView getCommunicationAckPopupView() {
+        return communicationAckPopupView;
+    }
+
     public AISAlarmModel getAISAlarmModel() {
         return aisAlarmModel;
     }
@@ -772,6 +818,10 @@ public class AISMain2 {
 
     public DestinationLoadView getDestinationLoadView() {
         return destinationLoadView;
+    }
+
+    public DestinationLoadModel getDestinationLoadModel() {
+        return destinationLoadModel;
     }
 
     public ETAInputView getETAInputView(){
@@ -815,7 +865,7 @@ public class AISMain2 {
     }
 
     public VoyageEditSession getVoyageSession() {
-        return voyageSession;
+        return voyageWorkflow.getSession();
     }
 
     public BearingView getBearingView() {
@@ -861,125 +911,60 @@ public class AISMain2 {
     }
 
     public void showMessageMenu() {
-        showCard(ScreenId.MESSAGE);
-        messageMenuView.setSelectedIndex(0);
-        messageMenuView.requestFocus();
+        messageWorkflow.showMessageMenu();
     }
 
     public void showEditAndTxSubMenu() {
-        showCard(ScreenId.EDIT_AND_TX_SUB);
+        messageWorkflow.showEditAndTxSubMenu();
     }
 
     public void showEditAndTx() {
-        showCard(ScreenId.EDIT_AND_TX);
-        editAndTxView.refresh();
+        messageWorkflow.showEditAndTx();
     }
 
     public void showTextEdit() {
-
-        // ① maxLength を毎回再計算
-        int maxLen = calcTextMaxLength();
-
-        // ② Model を再生成（最も安全）
-        textEditModel = new TextEditModel(maxLen);
-
-        // ③ View に Model を差し替え（再生成しない）
-        textEditView.setModel(textEditModel);
-
-        // ④ 初期化
-        textEditView.resetCursor();
-        textEditView.refresh();
-
-        // ⑤ 表示
-        showCard(ScreenId.TEXT_EDIT);
+        messageWorkflow.showTextEdit();
     }
 
     public void showTxConfirm() {
-        showCard(ScreenId.EDIT_AND_TX_TX_CONFIRM);
+        messageWorkflow.showTxConfirm();
     }
 
     public void showTxtransmitting() {
-        showCard(ScreenId.EDIT_AND_TX_TX_TRANSMITTING);
+        messageWorkflow.showTxTransmitting();
     }
 
     public void showTxTray() {
-        txTrayListView.updateFromModel(txTrayModel);
-        showCard(ScreenId.TX_TRAY);
+        messageWorkflow.showTxTray();
     }
 
     public void showTxTraySubMenu() {
-        showCard(ScreenId.TX_TRAY_SUB);
+        messageWorkflow.showTxTraySubMenu();
     }
 
     public void showTxTransmitting() {
-        showCard(ScreenId.EDIT_AND_TX_TX_TRANSMITTING);
+        messageWorkflow.showTxTransmitting();
     }
 
     public void showTxResult(TxMessage msg) {
-
-        TxResultView view = getTxResultView();
-
-        if (msg.isAddressed()) {
-            view.setResultText("RESULT : ACT OK");
-        } else {
-            view.setResultText("TRANSMIT : OK");
-        }
-
-        showCard(ScreenId.EDIT_AND_TX_TX_RESULT);
+        messageWorkflow.showTxResult(msg);
     }
 
-
     public void showRxTray() {
-
-        // ★ 初回のみダミー投入したい場合
-        if (rxTrayModel.size() == 0) {
-            rxTrayModel.generateDummyMessages();
-        }
-
-        rxTrayListView.updateFromModel(rxTrayModel);
-        showCard(ScreenId.RX_TRAY);
+        messageWorkflow.showRxTray();
     }
 
     public void showRxTraySubMenu() {
-        rxTraySubMenuView.setSelectedIndex(0);
-        showCard(ScreenId.RX_TRAY_SUB);
+        messageWorkflow.showRxTraySubMenu();
     }
 
     public void showRxTrayText() {
-        int idx = rxTrayListView.getSelectedIndex();
-        if (idx < 0) {
-            return;
-        }
-
-        RxMessage msg = rxTrayModel.get(idx);
-        if (msg == null) {
-            return;
-        }
-
-        // ★ TEXT VIEW 遷移時に既読化
-        msg.markRead();
-
-        // ★ 一覧表示を更新（＊を消す）
-        rxTrayListView.updateFromModel(rxTrayModel);
-
-        // TEXT VIEW 表示
-        rxTrayTextView.setMessage(msg);
-        showCard(ScreenId.RX_TRAY_TEXT);
+        messageWorkflow.showRxTrayText();
     }
-
 
     public void showRxTrayDetail() {
-        int idx = rxTrayListView.getSelectedIndex();
-        if (idx < 0) {
-            return;
-        }
-
-        RxMessage msg = rxTrayModel.get(idx);
-        rxTrayDetailView.setMessage(msg);
-
-        showCard(ScreenId.RX_TRAY_DETAIL);
+        messageWorkflow.showRxTrayDetail();
     }
-
 
     public void showInterrogation() {
         showCard(ScreenId.INTERROGATION);
@@ -1003,45 +988,40 @@ public class AISMain2 {
         /* LONG-RANGE の画面表示 */ }
 
     public void showMaintenance() {
-        maintenanceMenuView.setSelectedIndex(0);
-        showCard(ScreenId.MAINTENANCE_MENU);
+        maintenanceWorkflow.showMaintenance();
     }
 
     public void showSelfDiagnosis(){
-        selfDiagnosisModel.reset();          // 状態を初期化
-        selfDiagnosisView.update(selfDiagnosisModel);  // ← これが必須
-        showCard(ScreenId.SELF_DIAGNOSIS);
+        maintenanceWorkflow.showSelfDiagnosis();
     }
 
     public void showTransponderLog() {
-        showCard(ScreenId.TRANSPONDER_LOG);
+        maintenanceWorkflow.showTransponderLog();
     }
 
     public void showControllerLog() {
-        showCard(ScreenId.CONTROLLER_LOG);
+        maintenanceWorkflow.showControllerLog();
     }
 
-    public void showControllerLanLog() {       
-        showCard(ScreenId.CONTROLLER_LAN_LOG);
+    public void showControllerLanLog() {
+        maintenanceWorkflow.showControllerLanLog();
     }
 
     public void showCommunicationTest() {
-        communicationTestModel.reset();
-        showCard(ScreenId.COMMUNICATION_TEST);
+        maintenanceWorkflow.showCommunicationTest();
     }
-    
+
     public void showCommunicationTestTx() {
-        showCard(ScreenId.COMMUNICATION_TEST_TX);
+        maintenanceWorkflow.showCommunicationTestTx();
     }
 
     public void showAISAlarmCurrent() {
-        showCard(ScreenId.AIS_ALARM);
+        maintenanceWorkflow.showAISAlarmCurrent();
     }
 
     public void showAISAlarmHistory() {
-        showCard(ScreenId.AIS_ALARM);
+        maintenanceWorkflow.showAISAlarmHistory();
     }
-
 
     public void showGraphic(int mmsi) {
 
@@ -1082,18 +1062,12 @@ public class AISMain2 {
     }
 
     public void showVoyage() {
-        // ★ 編集セッション開始（毎回新規）
-        voyageSession = new VoyageEditSession(myship);
-
-        // ★ VoyageView を「作業用データ」で初期化
-        voyageView.refreshFrom(voyageSession.getWorking());
-        showCard(ScreenId.VOYAGE);
+        voyageWorkflow.showVoyage();
     }
 
     // ★ 再表示専用（絶対に new しない）
     public void redrawVoyage() {
-        voyageView.refreshFrom(voyageSession.getWorking());
-        showCard(ScreenId.VOYAGE);
+        voyageWorkflow.redrawVoyage();
     }
 
     public void showDestination(){
@@ -1101,17 +1075,7 @@ public class AISMain2 {
     }
 
     public void showDestinationLoad() {
-
-        // ① Model にデータ構築を任せる
-        destinationLoadModel.buildFrom(voyageSession.getWorking());
-
-        // ② View には「完成済みの List」だけ渡す
-        destinationLoadView.setDestinations(
-                destinationLoadModel.getDisplayList()
-        );
-
-        // ③ 画面遷移
-        showCard(ScreenId.DESTINATION_LOAD);
+        voyageWorkflow.showDestinationLoad();
     }
 
 
@@ -1205,7 +1169,7 @@ public class AISMain2 {
     // ENTER 押下時の「確定動作」を画面単位で提供する。
     // Controller は currentCard を見て
     // 対応する API を呼び分ける。
-    
+
     public void enterMenu() {
         String sel = menuView.getSelectedValue();
         if (sel == null) {
@@ -1240,69 +1204,21 @@ public class AISMain2 {
         showList();
     }
 
-    
-    public void enterTxTrayList() {
-        int idx = txTrayListView.getSelectedIndex();
-        if (idx < 0) {
-            return;
-        }
 
-        TxMessage msg = txTrayModel.get(idx);
-        txTextView.setMessage(msg);
-        showCard(ScreenId.TX_TRAY_TEXT);
+    public void enterTxTrayList() {
+        messageWorkflow.enterTxTrayList();
     }
 
     public void enterTxTraySubMenu() {
-        int idx = txTrayListView.getSelectedIndex();
-        TxMessage msg = txTrayModel.get(idx);
-
-        switch (txTraySubMenuView.getSelectedIndex()) {
-            case 0: // DETAIL VIEW
-                txMessageDetailView.setMessage(msg);
-                showCard(ScreenId.TX_TRAY_DETAIL);
-                break;
-            case 1: // EDIT
-                editAndTxModel.loadFromTxMessage(msg);
-                showEditAndTx();
-                break;
-            case 2: // DELETE
-                txTrayModel.remove(idx);
-                showTxTray();
-                break;
-            case 3: // EXIT
-                showTxTray();
-                break;
-        }
+        messageWorkflow.enterTxTraySubMenu();
     }
 
     public void enterRxTrayList() {
-        showRxTrayText();
+        messageWorkflow.enterRxTrayList();
     }
 
     public void enterRxTraySubMenu() {
-        int idx = rxTrayListView.getSelectedIndex();
-        RxMessage msg = rxTrayModel.get(idx);
-
-        switch (rxTraySubMenuView.getSelectedIndex()) {
-            case 0: // DETAIL VIEW
-                rxTrayDetailView.setMessage(msg);
-                showCard(ScreenId.RX_TRAY_DETAIL);
-                break;
-
-            case 1: // EDIT
-                editAndTxModel.loadFromRxMessage(msg);
-                showEditAndTx();
-                break;
-
-            case 2: // DELETE
-                rxTrayModel.remove(idx);
-                showRxTray();
-                break;
-
-            case 3: // EXIT
-                showRxTray();
-                break;
-        }
+        messageWorkflow.enterRxTraySubMenu();
     }
 
 
@@ -1368,166 +1284,35 @@ public class AISMain2 {
     }
 
     public void enterVoyage() {
-        settingItem vsel = voyageView.getList().getSelectedValue();
-        if (vsel == null) {
-            return;
-        }
-
-        switch (vsel.id) {
-            case 1:
-                showCard(ScreenId.NAV_STATUS);
-                navStatusView.setSelectedIndex(0);
-                break;
-            case 2: // DESTINATION
-                showCard(ScreenId.DESTINATION);
-                destinationInputView.resetCursor();
-                destinationInputView.requestFocusInWindow();
-                break;
-            case 3: // ETA
-                showCard(ScreenId.ETA);
-                break;
-            case 4: // DRAUGHT
-                showDraught();
-                draughtInputView.requestFocusInWindow();
-                break;
-
-            case 5: // PERSONS ON BOARD
-                showPersons();
-                personsInputView.requestFocusInWindow();
-                break;
-            case 6: // SHIP TYPE U.S.
-                showCard(ScreenId.SHIP_TYPE_US);
-                shipTypeUSInputView.requestFocusInWindow();
-                break;
-            case 7: // TYPE OF SHIP / CARGO
-                shipTypeCargoModel.resetPhase();
-                showCard(ScreenId.SHIP_TYPE_CARGO);
-                shipTypeCargoView.requestFocusInWindow();
-                break;
-
-        }
+        voyageWorkflow.enterVoyage();
     }
 
     // =====================================================
     // ENTER 実行 API（NAV STATUS）
     // =====================================================
     public void enterNavStatus() {
-
-        String status = navStatusView.getSelectedStatus();
-        if (status == null) {
-            return;
-        }
-
-        // データ更新
-        voyageSession.getWorking().setNavStatus(NavStatus.fromLabel(status));
-
-        // VoyageView 表示更新
-        voyageView.updateNavStatus(status);
-
-        // VOYAGE DATA に戻る
-        redrawVoyage();
-
-        // カーソルを 2.DESTINATION へ
-        SwingUtilities.invokeLater(()
-                -> getVoyageView().selectItemById(2)
-        );
+        voyageWorkflow.enterNavStatus();
     }
 
 
 
     public void enterVoyageSub() {
-
-        String vsub = voyageSubView.getSelectedItem();
-        if (vsub == null) {
-            return;
-        }
-
-        // ===== SET =====
-        if ("[ SET ]".equals(vsub)) {
-
-            // ① 航海情報を確定
-            voyageSession.commit();
-
-            // ② 確定済み OwnShipInfo を取得
-            OwnShipInfo ownShip = shipManager.getOwnShip();
-
-            // JSON生成
-            String json = OwnShipJsonUtil.toVoyageJson(ownShip);
-
-            try {
-                // ④ UDP ブロードキャスト送信
-                AisUdpBroadcaster broadcaster = new AisUdpBroadcaster();
-
-                broadcaster.sendJson(json);
-
-                broadcaster.close();
-
-            } catch (Exception e) {
-                LOGGER.log(Level.WARNING, "Failed to send voyage update", e);
-            }
-
-            // （デバッグ表示を残すなら）
-            LOGGER.fine(() -> "JSON sent: " + json);
-
-            voyageSession = null;
-            showCard(ScreenId.MENU);
-            return;
-        }
-
-
-
-        // ===== DEST LOAD =====
-        if( "[ DEST LOAD ]".equals(vsub)) {
-            showDestinationLoad();
-            return;
-        }
-
-        // ===== EXIT =====
-        if ("[ EXIT ]".equals(vsub)) {
-
-            // ★ 何もせず破棄
-            voyageSession = null;
-            showCard(ScreenId.MENU);
-            return;
-        }
+        voyageWorkflow.enterVoyageSub();
     }
 
     public void discardVoyageSession() {
-        voyageSession = null;
+        voyageWorkflow.discardSession();
     }
 
 
-    
+
 
     public void selectNextVoyageItem() {
-        int sv = voyageView.getSelectedIndex();
-        int target = (sv == -1) ? 0 : sv + 1;
-        int size = voyageView.getItemCount();
-
-        while (target < size) {
-            settingItem it = voyageView.getList().getModel().getElementAt(target);
-            if (it.selectable) {
-                voyageView.setSelectedIndex(target);
-                voyageView.getList().ensureIndexIsVisible(target);
-                break;
-            }
-            target++;
-        }
+        voyageWorkflow.selectNextVoyageItem();
     }
 
     public void selectPrevVoyageItem() {
-        int sv = voyageView.getSelectedIndex();
-        int target = (sv == -1) ? voyageView.getItemCount() - 1 : sv - 1;
-
-        while (target >= 0) {
-            settingItem it = voyageView.getList().getModel().getElementAt(target);
-            if (it.selectable) {
-                voyageView.setSelectedIndex(target);
-                voyageView.getList().ensureIndexIsVisible(target);
-                break;
-            }
-            target--;
-        }
+        voyageWorkflow.selectPrevVoyageItem();
     }
 
     public void nextOtherDetailPage() {
@@ -1578,7 +1363,7 @@ public class AISMain2 {
             public void onOk(String destination) {
 
                 // ★ ① working を更新
-                voyageSession.getWorking().destination = destination;
+                getVoyageSession().getWorking().destination = destination;
 
                 // ★ ② 表示更新
                 voyageView.setDestination(destination);
@@ -1600,18 +1385,13 @@ public class AISMain2 {
             @Override
             public void onOk(String text) {
 
-                // ① 編集結果を EditAndTxModel に確定
-                editAndTxModel.setText(text);
-
-                // ② SUB MENU に戻る
-                showEditAndTxSubMenu();
+                messageWorkflow.confirmTextEdit(text);
             }
 
             @Override
             public void onExit() {
 
-                // 編集破棄（Model はそのまま捨てる）
-                showEditAndTxSubMenu();
+                messageWorkflow.exitTextEdit();
             }
         });
 
@@ -1620,86 +1400,29 @@ public class AISMain2 {
     }
 
     private int calcTextMaxLength() {
-
-        EditAndTxModel.Format f = editAndTxModel.getFormat();
-        EditAndTxModel.Category c = editAndTxModel.getCategory();
-
-        if (f == EditAndTxModel.Format.ADDRESSED) {
-            return (c == EditAndTxModel.Category.SAFETY) ? 156 : 151;
-        } else {
-            return (c == EditAndTxModel.Category.SAFETY) ? 161 : 156;
-        }
+        return messageWorkflow.calcTextMaxLength();
     }
 
     /* =====================================================
     * TX MESSAGE 生成
     * ===================================================== */
     public TxMessage buildTxMessageFromEdit() {
-
-        TxMessage msg = new TxMessage();
-
-        /* ===== メッセージ種別 ===== */
-        msg.format = editAndTxModel.getFormat();
-        msg.category = editAndTxModel.getCategory();
-        msg.reply = editAndTxModel.getReply() == EditAndTxModel.Reply.ON;
-        msg.function = editAndTxModel.getFunction().name();
-        msg.channel = editAndTxModel.getChannel().ordinal();
-
-        /* ===== 宛先 ===== */
-        if (msg.format == EditAndTxModel.Format.ADDRESSED) {
-            msg.destination = editAndTxModel.getMmsiText(); // ★ 9桁文字列
-        } else {
-            msg.destination = "BROADCAST";
-        }
-
-        /* ===== 本文 ===== */
-        msg.text = editAndTxModel.getText();
-
-        /* ===== SAVE 状態 ===== */
-        // utcDateTime / transmitted / result は TxMessage コンストラクタで初期化済み
-        return msg;
+        return messageWorkflow.buildTxMessageFromEdit();
     }
 
     /* =====================================================
     * TX MESSAGE SAVE
     * ===================================================== */
     public void saveCurrentTxMessage() {
-
-        TxMessage msg = buildTxMessageFromEdit();
-
-        txTrayModel.add(msg);
-
-        // 一覧へ
-        showTxTray();
+        messageWorkflow.saveCurrentTxMessage();
     }
 
     public void executePseudoTx() {
-
-        TxMessage msg = editAndTxModel.buildTxMessage();
-
-        // TX TRAY に追加（未送信→送信中へ）
-        txTrayModel.add(msg);
-
-        executePseudoTx(msg);
+        messageWorkflow.executePseudoTx();
     }
 
     public void executePseudoTx(TxMessage msg) {
-
-        // ===== TX 開始 =====
-        msg.markTransmitting();
-
-        showTxTransmitting(); // NOW TRANSMITTING...
-
-        // ===== 擬似 ACK（1.5 秒後）=====
-        javax.swing.Timer timer = new javax.swing.Timer(1500, e -> {
-
-            msg.markAckOk();
-
-            showTxResult(msg); // ★ これだけ
-        });
-
-        timer.setRepeats(false);
-        timer.start();
+        messageWorkflow.executePseudoTx(msg);
     }
 
     private boolean pseudoInterrogationAck() {
@@ -1726,21 +1449,7 @@ public class AISMain2 {
     }
 
     public void executeCommunicationtest() {
-        
-        communicationTestModel.startTest();
-        showCard(ScreenId.COMMUNICATION_TEST_TX);
-
-        javax.swing.Timer timer = new javax.swing.Timer(1500, e -> {
-
-            boolean ok = pseudoInterrogationAck();
-            communicationTestModel.setResult(ok);
-
-            communicationAckPopupView.setAckResult(ok);
-            showCard(ScreenId.COMMUNICATION_ACK_POPUP);
-
-        });
-        timer.setRepeats(false);
-        timer.start();
+        maintenanceWorkflow.executeCommunicationTest();
     }
 
 
@@ -1823,16 +1532,16 @@ public class AISMain2 {
         otherShipDetailView.showPage(own, ship, page);
     }
 
+    public void navigateTo(ScreenId screenId) {
+        showCard(screenId);
+    }
+
 // カードを切り替える共通メソッド
     private void showCard(ScreenId screenId) {
-        CardLayout cl = (CardLayout) cardPanel.getLayout();
-        cl.show(cardPanel, screenId.cardName());
-        currentScreen = screenId;
+        screenNavigator.show(screenId);
+    }
 
-        if (rightPaneController != null) {
-            rightPaneController.showCardHelp(screenId);
-        }
-        
+    private void focusScreen(ScreenId screenId) {
         SwingUtilities.invokeLater(() -> {
             switch (screenId) {
                 case LIST:

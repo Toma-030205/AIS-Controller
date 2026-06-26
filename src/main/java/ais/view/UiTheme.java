@@ -7,11 +7,11 @@ import javax.swing.border.Border;
 
 public final class UiTheme {
     public static final String FONT_FAMILY = "Meiryo UI";
-    public static final Color HEADER_BG = UiTheme.HEADER_BG;
+    public static final Color HEADER_BG = new Color(180, 220, 255);
     public static final Color SUB_HEADER_BG = new Color(230, 230, 230);
-    public static final Color SELECTION_BG = UiTheme.SELECTION_BG;
-    public static final Color INPUT_CURSOR_BG = UiTheme.INPUT_CURSOR_BG;
-    public static final Color PANEL_BG = UiTheme.PANEL_BG;
+    public static final Color SELECTION_BG = new Color(220, 220, 220);
+    public static final Color INPUT_CURSOR_BG = new Color(255, 200, 100);
+    public static final Color PANEL_BG = Color.WHITE;
 
     private UiTheme() {
     }
